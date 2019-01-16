@@ -18,6 +18,31 @@ public abstract class Piece {
         m_rc = rc;
     }
 
+    /** Copy constructor for piece on another board */
+    public Piece(Board board, Piece otherPiece) {
+        m_board = board;
+        m_isWhite = otherPiece.m_isWhite;
+        m_rc = otherPiece.m_rc;
+    }
+
+    /** Returns true if the given coordinate is outside the board or the same as original position */
+    protected boolean outOfBounds(Coordinates rc) {
+        return (rc.equals(m_tempRC) || rc.m_row < 0 || rc.m_col < 0 
+            ||  rc.m_row >= Board.ROWS || rc.m_col >= Board.COLS);
+    }
+
+    /** Checks whether the given coordinate is already occupied by your own piece */
+    protected boolean occupiedBySelf(Coordinates rc) {
+        Piece otherPiece = m_board.getPieceAtCoordinate(rc);
+        return (otherPiece != null && otherPiece.m_isWhite == m_isWhite);
+    }
+
+    /** Checks whether the given coordinate is already occupied by an enemy piece */
+    protected boolean occupiedByEnemy(Coordinates rc) {
+        Piece otherPiece = m_board.getPieceAtCoordinate(rc);
+        return (otherPiece != null && otherPiece.m_isWhite != m_isWhite);
+    }
+
     /** If out of bounds or occupied by self returns false, otherwise adds 
      *  the coordinate rc to validMoves if king is not checked at the new move
      *  A version of some piece's getValidMoves will always be in the call stack */
@@ -52,23 +77,8 @@ public abstract class Piece {
     /** Updates variables when this piece is moved (does nothing by default) */
     public void updateWhenMoved() {}
 
-    /** Returns true if the given coordinate is outside the board or the same as original position */
-    protected boolean outOfBounds(Coordinates rc) {
-        return (rc.equals(m_tempRC) || rc.m_row < 0 || rc.m_col < 0 
-            ||  rc.m_row >= Board.ROWS || rc.m_col >= Board.COLS);
-    }
 
-    /** Checks whether the given coordinate is already occupied by your own piece */
-    protected boolean occupiedBySelf(Coordinates rc) {
-        Piece otherPiece = m_board.getPieceAtCoordinate(rc);
-        return (otherPiece != null && otherPiece.m_isWhite == m_isWhite);
-    }
-
-    /** Checks whether the given coordinate is already occupied by an enemy piece */
-    protected boolean occupiedByEnemy(Coordinates rc) {
-        Piece otherPiece = m_board.getPieceAtCoordinate(rc);
-        return (otherPiece != null && otherPiece.m_isWhite != m_isWhite);
-    }
+    public abstract int getPowerValue();
 
     /** Paints whether piece is white or black on the board */
     public void paint() {

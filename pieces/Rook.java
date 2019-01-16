@@ -6,14 +6,22 @@ import java.util.Set;
 public class Rook extends Piece {
 
     private final boolean m_isRight;
-    private boolean firstMove;
+    private boolean m_firstMove;
 
     /** Constructor */
     public Rook(Board board, Coordinates rc, boolean isWhite) {
         super(board, rc, isWhite);
         m_type = Type.ROOK;
         m_isRight = (rc.m_col == 0) ? false : true;
-        firstMove = true;
+        m_firstMove = true;
+    }
+
+
+    public Rook(Board board, Piece otherPiece) {
+        super(board, otherPiece);
+        Rook otherRook = (Rook) otherPiece;
+        m_isRight = otherRook.m_isRight;
+        m_firstMove = otherRook.m_firstMove;
     }
 
     /** Adds all valid moves by this piece into set of validMoves */
@@ -28,10 +36,16 @@ public class Rook extends Piece {
 
     /** Updates variables when this piece is moved */
     public void updateWhenMoved() {
-        if (firstMove) {
+        if (m_firstMove) {
             m_board.restrictCastling(m_isWhite, m_isRight);
-            firstMove = false;
+            m_firstMove = false;
         }
+    }
+
+    /** Gets the value of this piece */
+    public int getPowerValue() {
+        int factor = m_isWhite ? 1 : -1;
+        return 50*factor;
     }
 
     /** Paints this piece on the board */

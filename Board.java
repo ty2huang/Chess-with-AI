@@ -11,13 +11,14 @@ public class Board {
     public static final byte COLS = 8;
     public Coordinates m_enPassant;
     public boolean m_whiteTurn;
-    public int turnsSinceLastCapture;
+    public int m_turnsSinceLastCapture;
 
     private Piece[][] m_grid;
     private Map<Boolean, Map<Coordinates, Piece>> m_allPieces; 
     private Map<Boolean, King> m_kings;
     private Set<Coordinates> m_validMoves;
-    private Coordinates m_currRC;
+    private Coordinates m_lastPlacement;
+    private int m_advantagePoints;
 
     /** Constructor for Board */
     public Board() {
@@ -27,6 +28,50 @@ public class Board {
         m_allPieces.put(false, new HashMap<Coordinates, Piece>());
         m_kings = new HashMap<Boolean, King>();
         m_validMoves = new HashSet<Coordinates>();
+    }
+
+    /** Copies the other piece, only used in copy constructor */
+    private Piece copyPiece(Piece otherPiece) {
+        Piece piece = null;
+        if (otherPiece == null) return null;
+        switch(otherPiece.m_type) {
+            case PAWN:
+                piece = new Pawn(this, otherPiece);
+                break;
+            case ROOK:
+                piece = new Rook(this, otherPiece);
+                break;
+            case KNIGHT:
+                piece = new Knight(this, otherPiece);
+                break;
+            case BISHOP:
+                piece = new Bishop(this, otherPiece);
+                break;
+            case QUEEN:
+                piece = new Queen(this, otherPiece);
+                break;
+            case KING:
+                m_kings.put(otherPiece.m_isWhite, new King(this, otherPiece));
+                piece = m_kings.get(otherPiece.m_isWhite);
+                break;
+        }
+        return piece;
+    }
+
+    /** Copy constructor for board */
+    public Board(Board otherBoard) {
+        this();
+        m_enPassant = otherBoard.m_enPassant;
+        m_whiteTurn = otherBoard.m_whiteTurn;
+        m_turnsSinceLastCapture = otherBoard.m_turnsSinceLastCapture;
+        m_advantagePoints = otherBoard.m_advantagePoints;
+        for (byte row = 0; row < ROWS; row++) {
+            for (byte col = 0; col < COLS; col++) {
+                Coordinates rc = new Coordinates(row, col);
+                Piece otherPiece = otherBoard.getPieceAtCoordinate(rc);
+                setPieceAtCoordinate(copyPiece(otherPiece), rc);
+            }
+        }
     }
 
     /** A factory for making a new chess piece dependent on coordinate
@@ -67,17 +112,23 @@ public class Board {
         m_allPieces.get(true).clear();
         m_allPieces.get(false).clear();
         m_kings.clear();
-        m_currRC = null;
+        m_lastPlacement = null;
         m_enPassant = null;
         m_validMoves.clear();
         m_whiteTurn = true;
-        turnsSinceLastCapture = 0;
+        m_turnsSinceLastCapture = 0;
+        m_advantagePoints = 0;
         for (byte row = 0; row < ROWS; row++) {
             for (byte col = 0; col < COLS; col++) {
                 Coordinates rc = new Coordinates(row, col);
                 setPieceAtCoordinate(makeNewPiece(rc), rc);
             }
         }
+    }
+
+    /** Get the points for the state of the board (positive means white is winning) */
+    public int getAdvantagePoints() {
+        return m_advantagePoints;
     }
     
     /** Get the chess piece at given coordinate */
@@ -100,7 +151,6 @@ public class Board {
     /** Returns set of all coordinates that the selected piece can move to
      *  Takes into account player will be checked or if pieces are in the way */
     public Set<Coordinates> getAllValidMoves(Coordinates rc) {
-        m_currRC = rc;
         m_validMoves.clear();
         getPieceAtCoordinate(rc).getValidMoves(m_validMoves, true);
         return m_validMoves;
@@ -144,8 +194,8 @@ public class Board {
     public Piece moveSelectedPiece(Coordinates startRC, Coordinates finalRC, boolean actualMove) {
         Piece pieceToRemove = getPieceAtCoordinate(finalRC);
         if (actualMove) {
-            turnsSinceLastCapture++;
-            if (pieceToRemove != null) turnsSinceLastCapture = 0;
+            m_turnsSinceLastCapture++;
+            if (pieceToRemove != null) m_turnsSinceLastCapture = 0;
         }
 
         Piece piece = getPieceAtCoordinate(startRC);
@@ -176,7 +226,10 @@ public class Board {
         } 
         
         if (actualMove) {
-            m_currRC = finalRC;
+            m_lastPlacement = finalRC;
+            if (pieceToRemove != null) {
+                m_advantagePoints += pieceToRemove.getPowerValue();
+            }
         }
         return pieceToRemove;
     }
@@ -210,34 +263,34 @@ public class Board {
         }
     }
 
-
+    /** Returns true if the last moved piece is a pawn that reached the end of the board */
     public boolean pawnReachedEnd() {
-        Piece piece = getPieceAtCoordinate(m_currRC);
+        Piece piece = getPieceAtCoordinate(m_lastPlacement);
         return (piece.m_type == Type.PAWN) 
-            && (m_currRC.m_row == 0 || m_currRC.m_row == ROWS - 1);
+            && (m_lastPlacement.m_row == 0 || m_lastPlacement.m_row == ROWS - 1);
     }
 
-
+    /** Given a character input, evolves the pawn into the selected piece */
     public void evolvePawn(char newPiece) {
         Piece piece = null;
         switch (newPiece) {
             case 'R':
-                piece = new Rook(this, m_currRC, m_whiteTurn);
+                piece = new Rook(this, m_lastPlacement, m_whiteTurn);
                 break;
             case 'N':
-                piece = new Knight(this, m_currRC, m_whiteTurn);
+                piece = new Knight(this, m_lastPlacement, m_whiteTurn);
                 break;
             case 'B':
-                piece = new Bishop(this, m_currRC, m_whiteTurn);
+                piece = new Bishop(this, m_lastPlacement, m_whiteTurn);
                 break;
             case 'Q':
-                piece = new Queen(this, m_currRC, m_whiteTurn);
+                piece = new Queen(this, m_lastPlacement, m_whiteTurn);
                 break;
         }
-        setPieceAtCoordinate(piece, m_currRC);
+        setPieceAtCoordinate(piece, m_lastPlacement);
     }
 
-
+    /** Checks if the opponent has no valid moves left */
     private boolean noValidMovesLeft(boolean isWhite) {
         List<Piece> pieces = new ArrayList<Piece>(m_allPieces.get(isWhite).values());
         for (Piece piece : pieces) {
@@ -248,14 +301,14 @@ public class Board {
         return true;
     }
 
-
+    /** Checks if the current player has won */
     public boolean hasWon() {
         return (isKingChecked(!m_whiteTurn) && noValidMovesLeft(!m_whiteTurn));
     }
 
-
+    /** Checks if the game is in a state of a draw */
     public boolean isDraw() {
-        return (turnsSinceLastCapture >= 50 || noValidMovesLeft(!m_whiteTurn));
+        return (m_turnsSinceLastCapture >= 50 || noValidMovesLeft(!m_whiteTurn));
     }
 
     /** Paints the board (see comment for GameMain class for design) */

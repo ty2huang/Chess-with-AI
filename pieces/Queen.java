@@ -11,6 +11,12 @@ public class Queen extends Piece {
         m_type = Type.QUEEN;
     }
 
+    /** Copy constructor */
+    public Queen(Board board, Piece otherPiece) {
+        super(board, otherPiece);
+        m_type = Type.QUEEN;
+    }
+
     /** Adds all valid moves by this piece into set of validMoves */
     public void getValidMoves(Set<Coordinates> validMoves, boolean toMovePiece) {
         m_tempRC = m_rc;
@@ -20,6 +26,12 @@ public class Queen extends Piece {
             }
         }
         m_rc = m_tempRC;
+    }
+
+    /** Gets the value of this piece */
+    public int getPowerValue() {
+        int factor = m_isWhite ? 1 : -1;
+        return 90*factor;
     }
 
     /** Paints this piece on the board */

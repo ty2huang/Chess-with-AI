@@ -16,6 +16,15 @@ public class King extends Piece {
         m_canRightCastle = true;
     }
 
+    /** Copy constructor */
+    public King(Board board, Piece otherPiece) {
+        super(board, otherPiece);
+        m_type = Type.KING;
+        King otherKing = (King) otherPiece;
+        m_canLeftCastle = otherKing.m_canLeftCastle;
+        m_canRightCastle = otherKing.m_canRightCastle;
+    }
+
     /** Adds castling coordinates (two spaces from king) if all conditions are met
      *  Only used by King's getValidMoves(Set<Coordinates>, boolean) method*/
     private void addCastlingMoves(Set<Coordinates> validMoves, boolean toTheRight) {
@@ -50,6 +59,12 @@ public class King extends Piece {
     public void updateWhenMoved() {
         m_canLeftCastle = false;
         m_canRightCastle = false;
+    }
+
+    /** Gets the value of this piece */
+    public int getPowerValue() {
+        int factor = m_isWhite ? 1 : -1;
+        return 500*factor;
     }
 
     /** Paints this piece on the board */

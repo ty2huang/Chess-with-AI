@@ -1,10 +1,9 @@
 package chess;
 import mytools.Coordinates;
 import mytools.Reader;
-
-import java.util.Set;
-
 import chess.pieces.*;
+
+import java.util.*;
 
 /**
  * Main game file for chess game
@@ -31,6 +30,16 @@ import chess.pieces.*;
 public class GameMain {
 
     private Board m_board;
+    private ChessAI m_AI;
+
+    /** Receives input from user whether the given player is an AI */
+    private void getAIStatusOfPlayer(Map<Boolean, Boolean> isPlayerAI, boolean isWhite, String[] validArgsYN) {
+        String colour = isWhite ? "white" : "black";
+        System.out.print("Is player " + colour + " an AI (Y/N)? ");
+        String prompt = Reader.receiveValidInput(1, validArgsYN);
+        boolean statusAI = (prompt == "Y") ? true : false;
+        isPlayerAI.put(isWhite, statusAI);
+    }
 
     /** This converts chess coordinates such as A1 into 2d array index (ex E5 -> <3,4>) */
     private Coordinates convertChessCoordinates(String prompt) {
@@ -42,6 +51,7 @@ public class GameMain {
     /** Constructor for GameMain class */
     public GameMain() {
         m_board = new Board();
+        m_AI = new ChessAI(m_board);
         
         //Loops per game of chess, break out of loop when input to keep playing is N
         boolean sessionNotDone = true;
@@ -49,6 +59,13 @@ public class GameMain {
             m_board.init();
             System.out.println("Welcome to the Huang Console Chess Game!");
             m_board.paint(false);
+            
+            //Key is true for white player, and value is true if player is AI
+            Map<Boolean, Boolean> isPlayerAI = new HashMap<Boolean, Boolean>();
+            String[] validArgsYN = {"YN"};
+            getAIStatusOfPlayer(isPlayerAI, true, validArgsYN);
+            getAIStatusOfPlayer(isPlayerAI, false, validArgsYN);
+
             String[] validArgs = {"ABCDEFGH","12345678"};
             String prompt = "";
             
@@ -58,6 +75,13 @@ public class GameMain {
                 String currPlayer = m_board.m_whiteTurn ? "white" : "black";
                 System.out.println("It is " + currPlayer + "'s turn.");
 
+                if (isPlayerAI.get(m_board.m_whiteTurn)) {
+                    System.out.println("AI is thinking...");
+                    Coordinates[] chessMove = new Coordinates[2];
+                    m_AI.generateNextMove(chessMove);
+                    m_board.moveSelectedPiece(chessMove[0], chessMove[1], true);
+                }
+
                 //Loops until player makes a valid move
                 boolean turnNotDone = true;
                 while (turnNotDone) {
@@ -65,7 +89,8 @@ public class GameMain {
                     Set<Coordinates> validMoves = null;
                     Coordinates rcStart = null;
                     //Loops until player selects his own chess piece
-                    while (true) {
+                    boolean pieceNotSelected = true;
+                    while (pieceNotSelected) {
                         prompt = Reader.receiveValidInput(2, validArgs);
                         rcStart = convertChessCoordinates(prompt);
                         Piece piece = m_board.getPieceAtCoordinate(rcStart);
@@ -75,7 +100,7 @@ public class GameMain {
                                 System.out.print("No possible moves can be made with this chess piece." +
                                                  " Please select another piece: ");
                             } else {
-                                break;
+                                pieceNotSelected = false;
                             }
                         } else {
                             System.out.print("This is not a valid selection. Please select your piece: ");
@@ -85,11 +110,12 @@ public class GameMain {
                     System.out.print("Select where to move this piece (or enter X1 to move another piece): ");
                     String[] validArgs2 = {"ABCDEFGHX","12345678"};
                     //Loops until player selects a valid final location for the chess piece (or cancels to select another piece)
-                    while (true) {
+                    boolean placeToMoveNotSelected = true;
+                    while (placeToMoveNotSelected) {
                         prompt = Reader.receiveValidInput(2, validArgs2);
                         if (prompt.equals("X1")) {
                             m_board.paint(false);
-                            break;
+                            placeToMoveNotSelected = false;
                         } else if (prompt.charAt(0) == 'X') {
                             System.out.print("The input you provided is not valid. Please try again: ");
                         } else {
@@ -104,7 +130,7 @@ public class GameMain {
                                     m_board.evolvePawn(prompt.charAt(0));
                                 }
                                 turnNotDone = false;
-                                break;
+                                placeToMoveNotSelected = false;
                             } else {
                                 System.out.print("That is not a valid move for the selected chess piece. Try again: ");
                             }
@@ -124,8 +150,7 @@ public class GameMain {
             }
 
             System.out.print("Do you want to play again (Y/N)? ");
-            validArgs[0] = "YN";
-            prompt = Reader.receiveValidInput(1, validArgs);
+            prompt = Reader.receiveValidInput(1, validArgsYN);
             if (prompt.equals("N")) sessionNotDone = false;
         }
     }
