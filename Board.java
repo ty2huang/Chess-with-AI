@@ -10,6 +10,7 @@ public class Board {
     public static final byte ROWS = 8;
     public static final byte COLS = 8;
     public Coordinates m_enPassant;
+    public boolean m_oneTurnSinceEnPassant;
     public boolean m_whiteTurn;
     public int m_turnsSinceLastCapture;
 
@@ -17,8 +18,9 @@ public class Board {
     private Map<Boolean, Map<Coordinates, Piece>> m_allPieces; 
     private Map<Boolean, King> m_kings;
     private Set<Coordinates> m_validMoves;
+    private Coordinates m_lastSelection;
     private Coordinates m_lastPlacement;
-    private int m_advantagePoints;
+    //private int m_advantagePoints;
 
     /** Constructor for Board */
     public Board() {
@@ -62,9 +64,12 @@ public class Board {
     public Board(Board otherBoard) {
         this();
         m_enPassant = otherBoard.m_enPassant;
+        m_oneTurnSinceEnPassant = otherBoard.m_oneTurnSinceEnPassant;
         m_whiteTurn = otherBoard.m_whiteTurn;
         m_turnsSinceLastCapture = otherBoard.m_turnsSinceLastCapture;
-        m_advantagePoints = otherBoard.m_advantagePoints;
+        //m_advantagePoints = otherBoard.m_advantagePoints;
+        m_lastSelection = otherBoard.m_lastSelection;
+        m_lastPlacement = otherBoard.m_lastPlacement;
         for (byte row = 0; row < ROWS; row++) {
             for (byte col = 0; col < COLS; col++) {
                 Coordinates rc = new Coordinates(row, col);
@@ -112,12 +117,14 @@ public class Board {
         m_allPieces.get(true).clear();
         m_allPieces.get(false).clear();
         m_kings.clear();
+        m_lastSelection = null;
         m_lastPlacement = null;
         m_enPassant = null;
+        m_oneTurnSinceEnPassant = false;
         m_validMoves.clear();
         m_whiteTurn = true;
         m_turnsSinceLastCapture = 0;
-        m_advantagePoints = 0;
+        //m_advantagePoints = 0;
         for (byte row = 0; row < ROWS; row++) {
             for (byte col = 0; col < COLS; col++) {
                 Coordinates rc = new Coordinates(row, col);
@@ -128,7 +135,15 @@ public class Board {
 
     /** Get the points for the state of the board (positive means white is winning) */
     public int getAdvantagePoints() {
-        return m_advantagePoints;
+        //return m_advantagePoints;
+        int advantagePoints = 0;
+        List<Piece> allPieces = new ArrayList<Piece>();
+        allPieces.addAll(m_allPieces.get(false).values());
+        allPieces.addAll(m_allPieces.get(true).values());
+        for (Piece piece : allPieces) {
+            advantagePoints += piece.getPowerValue();
+        }
+        return advantagePoints;
     }
     
     /** Get the chess piece at given coordinate */
@@ -193,11 +208,6 @@ public class Board {
      *  Sets member variables for actual move */
     public Piece moveSelectedPiece(Coordinates startRC, Coordinates finalRC, boolean actualMove) {
         Piece pieceToRemove = getPieceAtCoordinate(finalRC);
-        if (actualMove) {
-            m_turnsSinceLastCapture++;
-            if (pieceToRemove != null) m_turnsSinceLastCapture = 0;
-        }
-
         Piece piece = getPieceAtCoordinate(startRC);
         setPieceAtCoordinate(null, startRC);
         setPieceAtCoordinate(piece, finalRC);
@@ -214,9 +224,11 @@ public class Board {
 
         // if en passant occurs
         if (m_enPassant != null) {
-            int row = (m_enPassant.m_row == 2) ? 3 : ROWS - 4;
-            Coordinates rc = new Coordinates(row, m_enPassant.m_col);
-            if (m_whiteTurn != getPieceAtCoordinate(rc).m_isWhite) {
+            if (m_oneTurnSinceEnPassant) {
+                m_oneTurnSinceEnPassant = false;
+            } else {
+                int row = (m_enPassant.m_row == 2) ? 3 : ROWS - 4;
+                Coordinates rc = new Coordinates(row, m_enPassant.m_col);
                 if (piece.m_type == Type.PAWN && finalRC.equals(m_enPassant)) {
                     pieceToRemove = getPieceAtCoordinate(rc);
                     setPieceAtCoordinate(null, rc);
@@ -226,9 +238,14 @@ public class Board {
         } 
         
         if (actualMove) {
+            m_lastSelection = startRC;
             m_lastPlacement = finalRC;
+            m_whiteTurn = !m_whiteTurn;
+            m_turnsSinceLastCapture++;
+            //m_advantagePoints += (piece.getPositionValue(finalRC) - piece.getPositionValue(startRC));
             if (pieceToRemove != null) {
-                m_advantagePoints += pieceToRemove.getPowerValue();
+                m_turnsSinceLastCapture = 0;
+                //m_advantagePoints -= pieceToRemove.getPowerValue();
             }
         }
         return pieceToRemove;
@@ -275,16 +292,16 @@ public class Board {
         Piece piece = null;
         switch (newPiece) {
             case 'R':
-                piece = new Rook(this, m_lastPlacement, m_whiteTurn);
+                piece = new Rook(this, m_lastPlacement, !m_whiteTurn);
                 break;
             case 'N':
-                piece = new Knight(this, m_lastPlacement, m_whiteTurn);
+                piece = new Knight(this, m_lastPlacement, !m_whiteTurn);
                 break;
             case 'B':
-                piece = new Bishop(this, m_lastPlacement, m_whiteTurn);
+                piece = new Bishop(this, m_lastPlacement, !m_whiteTurn);
                 break;
             case 'Q':
-                piece = new Queen(this, m_lastPlacement, m_whiteTurn);
+                piece = new Queen(this, m_lastPlacement, !m_whiteTurn);
                 break;
         }
         setPieceAtCoordinate(piece, m_lastPlacement);
@@ -302,46 +319,81 @@ public class Board {
     }
 
     /** Checks if the current player has won */
-    public boolean hasWon() {
-        return (isKingChecked(!m_whiteTurn) && noValidMovesLeft(!m_whiteTurn));
+    public boolean hasLost() {
+        return (isKingChecked(m_whiteTurn) && noValidMovesLeft(m_whiteTurn));
     }
 
     /** Checks if the game is in a state of a draw */
     public boolean isDraw() {
-        return (m_turnsSinceLastCapture >= 50 || noValidMovesLeft(!m_whiteTurn));
+        return (m_turnsSinceLastCapture >= 50 || noValidMovesLeft(m_whiteTurn));
+    }
+
+    /** Gets all possible chess moves for every piece on the board */
+    public void getAllPossibleChessMoves(List<Coordinates> selection, List<Coordinates> destination) {
+        List<Piece> pieces = new ArrayList<Piece>(m_allPieces.get(m_whiteTurn).values());
+        for (Piece piece : pieces) {
+            Set<Coordinates> validMoves = new HashSet<Coordinates>();
+            piece.getValidMoves(validMoves, true);
+            for (Coordinates rc : validMoves) {
+                selection.add(piece.m_rc);
+                destination.add(rc);
+            }
+        }
+    }
+
+
+    public boolean equals(Object obj) {
+        if (obj == null) return false;
+        if (!(obj instanceof Board)) return false;
+        Board board = (Board) obj;
+        for (int row = 0; row < ROWS; row++) {
+            for (int col = 0; col < COLS; col++) {
+                Coordinates rc = new Coordinates(row, col);
+                Piece piece1 = getPieceAtCoordinate(rc);
+                Piece piece2 = board.getPieceAtCoordinate(rc);
+                if (piece1 == null && piece2 != null) return false;
+                if (piece1 != null && !piece1.equals(piece2)) return false;
+            }
+        }
+        return true;
     }
 
     /** Paints the board (see comment for GameMain class for design) */
     public void paint(boolean markValidMoves) {
         String dashes = "---------------------------------------";
-        System.out.println();
+        String colLabel = "  ";
+        for (byte col = 0; col < COLS; col++) {
+            char currLetter = (char) ('A' + col);
+            colLabel += "  " + currLetter + "  ";
+        }
+        System.out.println(colLabel);
         System.out.println("   " + dashes);
         for (byte row = 0; row < ROWS; row++) {
-            System.out.print(ROWS - row + " |");
+            System.out.print((ROWS - row) + " |");
             for (byte col = 0; col < COLS; col++) {
                 Coordinates rc = new Coordinates(row, col);
                 char cellPadding = ' ';
                 if (markValidMoves && m_validMoves.contains(rc)) {
                     cellPadding = '-';
+                } else if (!markValidMoves && 
+                          (rc.equals(m_lastPlacement) || rc.equals(m_lastSelection))) {
+                    cellPadding = '=';
                 }
                 System.out.print(cellPadding);
                 if (getPieceAtCoordinate(rc) != null) {
                     getPieceAtCoordinate(rc).paint();
                 } else {
-                    System.out.print("  ");
+                    System.out.print(" ");
                 }
+                System.out.print(" ");
                 System.out.print(cellPadding);
                 System.out.print("|");
             }
-            System.out.println();
+            System.out.println(" " + (ROWS - row));
             if (row < ROWS - 1) System.out.println("  |" + dashes + "|");
             else System.out.println("   " + dashes);
         }
-        System.out.print("  ");
-        for (byte col = 0; col < COLS; col++) {
-            char currLetter = (char) ('A' + col);
-            System.out.print("  " + currLetter + "  ");
-        }
-        System.out.println(); System.out.println();
+        System.out.println(colLabel); 
+        System.out.println();
     }
 }

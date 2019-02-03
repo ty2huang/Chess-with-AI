@@ -12,6 +12,8 @@ public class King extends Piece {
     public King(Board board, Coordinates rc, boolean isWhite) {
         super(board, rc, isWhite);
         m_type = Type.KING;
+        m_power = 20000;
+        ReadFileToPositionValues("King.txt");
         m_canLeftCastle = true;
         m_canRightCastle = true;
     }
@@ -19,7 +21,6 @@ public class King extends Piece {
     /** Copy constructor */
     public King(Board board, Piece otherPiece) {
         super(board, otherPiece);
-        m_type = Type.KING;
         King otherKing = (King) otherPiece;
         m_canLeftCastle = otherKing.m_canLeftCastle;
         m_canRightCastle = otherKing.m_canRightCastle;
@@ -61,15 +62,10 @@ public class King extends Piece {
         m_canRightCastle = false;
     }
 
-    /** Gets the value of this piece */
-    public int getPowerValue() {
-        int factor = m_isWhite ? 1 : -1;
-        return 500*factor;
-    }
-
     /** Paints this piece on the board */
     public void paint() {
         super.paint();
-        System.out.print("K");
+        String utf8Sym = (m_isWhite) ? "\u265A" : "\u2654";
+        System.out.print(utf8Sym);
     }
 }

@@ -2,6 +2,7 @@ package chess.pieces;
 import chess.*;
 import mytools.Coordinates;
 import java.util.Set;
+import java.io.*;
 
 public abstract class Piece {
 
@@ -10,19 +11,55 @@ public abstract class Piece {
     public Coordinates m_rc;
     protected final Board m_board;
     protected Coordinates m_tempRC;
+    protected int[][] m_valueByPosition;
+    protected int m_power;
+    protected final int m_factor;
 
     /** Constructor */
     public Piece(Board board, Coordinates rc, boolean isWhite) {
         m_board = board;
         m_isWhite = isWhite;
+        m_factor = isWhite ? 1 : -1;
         m_rc = rc;
+        m_valueByPosition = new int[Board.ROWS][Board.COLS];
     }
 
     /** Copy constructor for piece on another board */
     public Piece(Board board, Piece otherPiece) {
-        m_board = board;
-        m_isWhite = otherPiece.m_isWhite;
-        m_rc = otherPiece.m_rc;
+        this(board, otherPiece.m_rc, otherPiece.m_isWhite);
+        m_type = otherPiece.m_type;
+        m_power = otherPiece.m_power;
+        for (byte row = 0; row < Board.ROWS; row++) {
+            for (byte col = 0; col < Board.COLS; col++) {
+                m_valueByPosition[row][col] = otherPiece.m_valueByPosition[row][col];
+            }
+        }
+    }
+
+    /** Reads the file given filename to inputs into 2D array m_valueByPosition */
+    protected void ReadFileToPositionValues(String fileName) {
+        BufferedReader br = null;
+        String dir = "/Users/Tim/OneDrive/ProgrammingProjects/Java/chess/pieces/";
+        try {
+            br = new BufferedReader(new FileReader(dir + fileName));
+            for (byte row = 0; row < Board.ROWS; row++) {
+                String line = br.readLine();
+                String[] values = line.split(",");
+                for (byte col = 0; col < Board.COLS; col++) {
+                    m_valueByPosition[row][col] = Integer.parseInt(values[col].trim());
+                }
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (br != null) br.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     /** Returns true if the given coordinate is outside the board or the same as original position */
@@ -77,12 +114,28 @@ public abstract class Piece {
     /** Updates variables when this piece is moved (does nothing by default) */
     public void updateWhenMoved() {}
 
+    /** Gets the value of the position of this piece */
+    private int getPositionValue(Coordinates rc) {
+        int row = (m_isWhite) ? rc.m_row : Board.ROWS - 1 - rc.m_row;
+        return m_factor*m_valueByPosition[row][rc.m_col];
+    }
 
-    public abstract int getPowerValue();
+    /** Gets the value of the power of this piece */
+    public int getPowerValue() {
+        return m_power*m_factor + getPositionValue(m_rc);
+    }
+
+
+    public boolean equals(Object obj) {
+        if (obj == null) return false;
+        if (!(obj instanceof Piece)) return false;
+        Piece piece = (Piece) obj;
+        return m_isWhite == piece.m_isWhite && m_type == piece.m_type;
+    }
 
     /** Paints whether piece is white or black on the board */
     public void paint() {
-        char playerSymbol = m_isWhite ?  'w' : 'b';
-        System.out.print(playerSymbol);
+        /*char playerSymbol = m_isWhite ?  'w' : 'b';
+        System.out.print(playerSymbol);*/
     }
 }

@@ -9,12 +9,13 @@ public class Queen extends Piece {
     public Queen(Board board, Coordinates rc, boolean isWhite) {
         super(board, rc, isWhite);
         m_type = Type.QUEEN;
+        m_power = 900;
+        ReadFileToPositionValues("Queen.txt");
     }
 
     /** Copy constructor */
     public Queen(Board board, Piece otherPiece) {
         super(board, otherPiece);
-        m_type = Type.QUEEN;
     }
 
     /** Adds all valid moves by this piece into set of validMoves */
@@ -28,15 +29,10 @@ public class Queen extends Piece {
         m_rc = m_tempRC;
     }
 
-    /** Gets the value of this piece */
-    public int getPowerValue() {
-        int factor = m_isWhite ? 1 : -1;
-        return 90*factor;
-    }
-
     /** Paints this piece on the board */
     public void paint() {
         super.paint();
-        System.out.print("Q");
+        String utf8Sym = (m_isWhite) ? "\u265B" : "\u2655";
+        System.out.print(utf8Sym);
     }
 }

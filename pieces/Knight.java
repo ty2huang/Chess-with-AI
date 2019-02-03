@@ -9,12 +9,13 @@ public class Knight extends Piece {
     public Knight(Board board, Coordinates rc, boolean isWhite) {
         super(board, rc, isWhite);
         m_type = Type.KNIGHT;
+        m_power = 320;
+        ReadFileToPositionValues("Knight.txt");
     }
 
     /** Copy constructor */
     public Knight(Board board, Piece otherPiece) {
         super(board, otherPiece);
-        m_type = Type.KNIGHT;
     }
 
     /** Adds all valid moves by this piece into set of validMoves */
@@ -35,15 +36,10 @@ public class Knight extends Piece {
         m_rc = m_tempRC;
     }
 
-    /** Gets the value of this piece */
-    public int getPowerValue() {
-        int factor = m_isWhite ? 1 : -1;
-        return 30*factor;
-    }
-
     /** Paints this piece on the board */
     public void paint() {
         super.paint();
-        System.out.print("N");
+        String utf8Sym = (m_isWhite) ? "\u265E" : "\u2658";
+        System.out.print(utf8Sym);
     }
 }

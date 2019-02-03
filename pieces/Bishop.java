@@ -9,12 +9,13 @@ public class Bishop extends Piece {
     public Bishop(Board board, Coordinates rc, boolean isWhite) {
         super(board, rc, isWhite);
         m_type = Type.BISHOP;
+        m_power = 330;
+        ReadFileToPositionValues("Bishop.txt");
     }
 
     /** Copy constructor */
     public Bishop(Board board, Piece otherPiece) {
         super(board, otherPiece);
-        m_type = Type.BISHOP;
     }
 
     /** Adds all valid moves by this piece into set of validMoves */
@@ -28,15 +29,10 @@ public class Bishop extends Piece {
         m_rc = m_tempRC;
     }
 
-    /** Gets the value of this piece */
-    public int getPowerValue() {
-        int factor = m_isWhite ? 1 : -1;
-        return 30*factor;
-    }
-
     /** Paints this piece on the board */
     public void paint() {
         super.paint();
-        System.out.print("B");
+        String utf8Sym = (m_isWhite) ? "\u265D" : "\u2657";
+        System.out.print(utf8Sym);
     }
 }

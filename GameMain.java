@@ -1,35 +1,35 @@
 package chess;
-import mytools.Coordinates;
-import mytools.Reader;
+import mytools.*;
 import chess.pieces.*;
 
 import java.util.*;
 
 /**
- * Main game file for chess game
- * 
+ * Main game file for chess game (first enter "chcp 65001" in terminal)
+ *      A    B    C    D    E    F    G    H
        ---------------------------------------
-    8 | bR | bN | bB | bQ | bK | bB | bN | bR |
+    8 | bR | bN | bB | bQ | bK | bB | bN | bR | 8
       |---------------------------------------|
-    7 | bp | bp | bp | bp | bp | bp | bp | bp |
+    7 | bp | bp | bp | bp | bp | bp | bp | bp | 7
       |---------------------------------------|
-    6 |    |    |    |    |    |    |    |    |  
+    6 |    |    |    |    |    |    |    |    | 6
       |---------------------------------------|
-    5 |    |    |    |    |    |    |    |    |
+    5 |    |    |    |    |    |    |    |    | 5
       |---------------------------------------|
-    4 |    |    |    |    |    |    |    |    |
+    4 |    |    |    |    |    |    |    |    | 4
       |---------------------------------------|
-    3 |    |    |    |    |    |    |    |    | 
+    3 |    |    |    |    |    |    |    |    | 5
       |---------------------------------------|
-    2 | wp | wp | wp | wp | wp | wp | wp | wp |
+    2 | wp | wp | wp | wp | wp | wp | wp | wp | 6
       |---------------------------------------|
-    1 | wR | wN | wB | wQ | wK | wB | wN | wR |
+    1 | wR | wN | wB | wQ | wK | wB | wN | wR | 7
        ---------------------------------------
         A    B    C    D    E    F    G    H  
  */
 public class GameMain {
 
     private Board m_board;
+    private BoardHistory m_history;
     private ChessAI m_AI;
 
     /** Receives input from user whether the given player is an AI */
@@ -37,7 +37,7 @@ public class GameMain {
         String colour = isWhite ? "white" : "black";
         System.out.print("Is player " + colour + " an AI (Y/N)? ");
         String prompt = Reader.receiveValidInput(1, validArgsYN);
-        boolean statusAI = (prompt == "Y") ? true : false;
+        boolean statusAI = (prompt.equals("Y")) ? true : false;
         isPlayerAI.put(isWhite, statusAI);
     }
 
@@ -51,7 +51,8 @@ public class GameMain {
     /** Constructor for GameMain class */
     public GameMain() {
         m_board = new Board();
-        m_AI = new ChessAI(m_board);
+        m_history = new BoardHistory();
+        m_AI = new ChessAI(m_board, m_history);
         
         //Loops per game of chess, break out of loop when input to keep playing is N
         boolean sessionNotDone = true;
@@ -74,16 +75,22 @@ public class GameMain {
             while (gameNotDone) {
                 String currPlayer = m_board.m_whiteTurn ? "white" : "black";
                 System.out.println("It is " + currPlayer + "'s turn.");
-
+                
+                boolean turnNotDone = true;
                 if (isPlayerAI.get(m_board.m_whiteTurn)) {
                     System.out.println("AI is thinking...");
                     Coordinates[] chessMove = new Coordinates[2];
-                    m_AI.generateNextMove(chessMove);
+                    char[] pawnEvolution = {'.'};
+                    m_AI.generateNextMove(chessMove, pawnEvolution);
+                    m_history.addBoard(new Board(m_board));
                     m_board.moveSelectedPiece(chessMove[0], chessMove[1], true);
+                    if (m_board.pawnReachedEnd()) {
+                        m_board.evolvePawn(pawnEvolution[0]);
+                    }
+                    turnNotDone = false;
                 }
 
                 //Loops until player makes a valid move
-                boolean turnNotDone = true;
                 while (turnNotDone) {
                     System.out.print("Please select your piece to move (eg. A3): ");
                     Set<Coordinates> validMoves = null;
@@ -121,6 +128,7 @@ public class GameMain {
                         } else {
                             Coordinates rcFinal = convertChessCoordinates(prompt);
                             if (validMoves.contains(rcFinal)) {
+                                m_history.addBoard(new Board(m_board));
                                 m_board.moveSelectedPiece(rcStart, rcFinal, true);
                                 if (m_board.pawnReachedEnd()) {
                                     System.out.println("Your pawn has reached the end! Select what it becomes...");
@@ -139,14 +147,13 @@ public class GameMain {
                 }
                 
                 m_board.paint(false);
-                if (m_board.hasWon()) {
+                if (m_board.hasLost()) {
                     System.out.println("The winning player is " + currPlayer + "!"); 
                     gameNotDone = false;
                 } else if (m_board.isDraw()) {
                     System.out.println("It's a draw."); 
                     gameNotDone = false;
                 }
-                m_board.m_whiteTurn = !m_board.m_whiteTurn;
             }
 
             System.out.print("Do you want to play again (Y/N)? ");
