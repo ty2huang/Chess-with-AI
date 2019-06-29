@@ -39,7 +39,7 @@ public abstract class Piece {
     /** Reads the file given filename to inputs into 2D array m_valueByPosition */
     protected void ReadFileToPositionValues(String fileName) {
         BufferedReader br = null;
-        String dir = "/Users/Tim/OneDrive/ProgrammingProjects/Java/chess/pieces/";
+        String dir = "chess/pieces/";
         try {
             br = new BufferedReader(new FileReader(dir + fileName));
             for (byte row = 0; row < Board.ROWS; row++) {
